@@ -7,10 +7,14 @@
 #include "Functions.h"
 #include "Data.h"
 #include <format>
+
 UWorld* world = 0;
 uintptr_t aimedAt = 0;
 bool ladderToggle = false;
 bool aimToggle = false;
+uintptr_t localCrewId = 0;
+wchar_t* localPlayerName;
+wchar_t* myCrew[4];
 
 long long worldAddress = 0;
 
@@ -34,23 +38,25 @@ float GetPlayerHealth(AActor* actor) {
     return health;
 }
 
-void CrewService(AActor* actor) {
+void CrewService(AActor* actor, ULocalPlayer* player) {
     auto crewService = reinterpret_cast<ACrewService*>(actor);
     auto crews = crewService->Crews;
     auto crewCount = crews.Count;
+
+    int textYOffset = 0;
 
     int x = SOT_WINDOW_W - 200;
     int y = SOT_WINDOW_H - 1400;
 
     for (int i = 0; i < crewCount; i++) {
-        RECT pos = { x, y + (i * 30), x + 140, y + 160 };
+        
         auto crewPlayers = crews.Objects[i].Players;
-        auto crewID = crews.Objects[i].CrewId.D;
+        auto crewID = crews.Objects[i].CrewId;
         auto crewSession = crews.Objects[i].CrewSessionTemplate;
         auto crewMatchMaking = crewSession.MaxMatchmakingPlayers;
-
         std::string typeOfShip = "";
 
+        //Determining what kind of ship the crew is sailing depending on the crewMaxMatchMaking capacity.
         switch (crewMatchMaking)
         {
         case 2:
@@ -66,13 +72,45 @@ void CrewService(AActor* actor) {
             break;
         }
 
+        /*for (int j = 0; j < crewPlayers.Count; j++) {
+            if (crewPlayers.Objects[j]) {
+                auto crewName = crewPlayers.Objects[j]->PlayerName.c_str();
+
+                if (wcscmp(crewName, localPlayerName) == 0) {
+                    localCrewId = (uintptr_t)(&crewID);
+                }
+                if (localCrewId != 0 && localCrewId == (uintptr_t)(&crewID)) {
+                    myCrew[j] = crewName;
+                }
+            }   
+        }*/
+
+        //offsets and text for the crew list.
+        textYOffset = y + (i * 35);
+        RECT pos = { x, textYOffset, x + 180, y + 240 };
 
         wchar_t* text = convertCharArrayToLPCWSTR(convertStringToCharArray(std::format("Crew #{} - {}", i + 1, typeOfShip)));
-        DirectX.Font->DrawTextW(NULL, text, -1, &pos, 0, D3DCOLOR_ARGB(255, 0, 100, 100));
-        for (int j = 0; j < crewPlayers.Count; j++) {
+        wchar_t* textPlayers = convertCharArrayToLPCWSTR(convertStringToCharArray(std::format("     Players on board: {}", crewPlayers.Count)));
+
+        //Checking if the crew is at max players.  If not the text will appear red.
+        auto colour = D3DCOLOR_ARGB(255, 0, 200, 100);
+        if ((float)(crewPlayers.Count / crewMatchMaking) < 1) {
+            colour = D3DCOLOR_ARGB(255, 200, 0, 100);
+        }
+        
+        //Printing the crew list.
+        DirectX.Font->DrawTextW(NULL, text, -1, &pos, 0, colour);
+
+        //Offsetting the player count text in the crew list.
+        textYOffset += 15;
+        pos = { x, textYOffset, x + 180, y + 240 };
+
+        
+        DirectX.Font->DrawTextW(NULL, textPlayers, -1, &pos, 0, colour);
+        /*for (int j = 0; j < crewPlayers.Count; j++) {
             auto player = crewPlayers.Objects[j]->PlayerName;
             //DirectX.Font->DrawTextW(NULL, player.c_str(), -1, &pos, 0, D3DCOLOR_ARGB(255, 0, 100, 100));
-        }
+        }*/
     }
 }
 
@@ -100,7 +138,7 @@ void DrawActorOnScreen(const std::string& name, FVector& actorRelativeVector, AP
     
     if (strstr(name.c_str(), "CrewService")) {
        
-        CrewService(actor);
+        CrewService(actor, localPlayer);
     }
     if (strstr(name.c_str(), "Ladder")) {
         
@@ -128,8 +166,6 @@ void DrawActorOnScreen(const std::string& name, FVector& actorRelativeVector, AP
         actorRelativeVector.z -= 60;
         auto screenAim = ToScreen(playerCoordinates, playerRotation, actorRelativeVector, playerFov);
 
-        
-
         if ((GetAsyncKeyState(VK_RBUTTON) & 0x8000) && GetDistance(playerCoordinates, actorRelativeVector) < 5 && aimToggle) {
             if (aimedAt == 0) {
                 aimedAt = reinterpret_cast<uintptr_t>(actor);
@@ -145,10 +181,11 @@ void DrawActorOnScreen(const std::string& name, FVector& actorRelativeVector, AP
         actorRelativeVector.z -= 100;
 
         auto screenPosFeet = ToScreen(playerCoordinates, playerRotation, actorRelativeVector, playerFov);
-        Drawing::Rect(screenPos.x - (screenPosFeet.y - screenPos.y) / 3, screenPos.y, (screenPosFeet.y - screenPos.y)/1.5, screenPosFeet.y - screenPos.y, D3DCOLOR_ARGB(255, 255, 5, 5));
+        
       
         RECT pos = { screenPos.x - 15, screenPos.y - 40, screenPos.x + 180, screenPos.y + 30 };     
         RECT pos2 = { screenPos.x - 15, screenPos.y - 20, screenPos.x + 180, screenPos.y + 30 };     
+        RECT pos3 = { screenPosFeet.x - 12, screenPosFeet.y + 15, screenPosFeet.x + 180, screenPosFeet.y + 30 };
 
         
         
@@ -173,17 +210,21 @@ void DrawActorOnScreen(const std::string& name, FVector& actorRelativeVector, AP
                     Drawing::FilledRect(screenPos.x - 15, screenPos.y - 20, (int)((playerHealth / 100) * 60), 7, colour);
 
                     text = nameAddress.c_str();
+                    wchar_t* distanceText = convertCharArrayToLPCWSTR(convertStringToCharArray(std::format("> {}m < ", GetDistance(playerCoordinates, actorRelativeVector))));
+                    DirectX.Font->DrawTextW(NULL, distanceText, -1, &pos3, 0, D3DCOLOR_ARGB(255, 255, 5, 5));
                 }
             }
-        }
-        else {
-            //text = convertCharArrayToLPCWSTR(convertStringToCharArray(std::format("Player - {}m ", GetDistance(playerCoordinates, actorRelativeVector))));
-            text = convertCharArrayToLPCWSTR(convertStringToCharArray("Player"));
         }
 
         
         DirectX.Font->DrawTextW(NULL, text, -1, &pos, 0, D3DCOLOR_ARGB(255, 255, 5, 5));
-        
+        auto playerColour = D3DCOLOR_ARGB(255, 255, 5, 5);
+        /*for (int i = 0; i < sizeof(myCrew); i++) {
+            if (wcscmp(myCrew[i], text) == 0) {
+                playerColour = D3DCOLOR_ARGB(255, 5, 255, 5);
+            }
+        }*/
+        Drawing::Rect(screenPos.x - (screenPosFeet.y - screenPos.y) / 3, screenPos.y, (screenPosFeet.y - screenPos.y) / 1.5, screenPosFeet.y - screenPos.y, playerColour);
     }
 
 
@@ -306,6 +347,9 @@ void GetActors() {
     auto pawn = playerController->AcknowledgedPawn;
     //FastLadder(pawn);
     auto playerState = pawn->PlayerState;
+    if (playerState && localPlayerName != playerState->PlayerName.c_str()) {
+        localPlayerName = playerState->PlayerName.c_str();
+    }
     
     auto levels = world->Levels;
 

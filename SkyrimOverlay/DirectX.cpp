@@ -26,7 +26,7 @@ bool bInitialized = false;
 bool bKeys[255];
 bool bKeyPrev[255];
 
-bool bMenuEnabled = true;
+bool bMenuEnabled = false;
 
 int iSelectedItem = 0;
 
