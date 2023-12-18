@@ -15,6 +15,9 @@ bool aimToggle = false;
 uintptr_t localCrewId = 0;
 wchar_t* localPlayerName;
 wchar_t* myCrew[4];
+uint8_t r, g, b = 0;
+D3DCOLOR rainbow;
+
 
 long long worldAddress = 0;
 
@@ -72,19 +75,6 @@ void CrewService(AActor* actor, ULocalPlayer* player) {
             break;
         }
 
-        /*for (int j = 0; j < crewPlayers.Count; j++) {
-            if (crewPlayers.Objects[j]) {
-                auto crewName = crewPlayers.Objects[j]->PlayerName.c_str();
-
-                if (wcscmp(crewName, localPlayerName) == 0) {
-                    localCrewId = (uintptr_t)(&crewID);
-                }
-                if (localCrewId != 0 && localCrewId == (uintptr_t)(&crewID)) {
-                    myCrew[j] = crewName;
-                }
-            }   
-        }*/
-
         //offsets and text for the crew list.
         textYOffset = y + (i * 35);
         RECT pos = { x, textYOffset, x + 180, y + 240 };
@@ -114,8 +104,24 @@ void CrewService(AActor* actor, ULocalPlayer* player) {
     }
 }
 
-void Player() {
+D3DCOLOR rainbowColour() {
+    if (r < 255) {
+        r += 1;
+    }
+    else if (r > 254 && g < 255) {
+        g += 1;
+    }
+    else if (r > 254 && b < 255) {
+        b += 1;
+    }
+    else if (r > 254 && g > 254 && b > 254) {
+        r = 0;
+        g = 0;
+        b = 0;
+    }
+    auto colour = D3DCOLOR_ARGB(255, r, g, b);
 
+    return colour;
 }
 
 void DrawActorOnScreen(const std::string& name, FVector& actorRelativeVector, APlayerState* playerState, ULocalPlayer* localPlayer, AActor* actor) {
@@ -135,7 +141,14 @@ void DrawActorOnScreen(const std::string& name, FVector& actorRelativeVector, AP
         DirectX.Font->DrawTextW(NULL, text, -1, &pos, 0, D3DCOLOR_ARGB(255, 255, 5, 5));
     }
     */
-    
+    if (strstr(name.c_str(), "BP_Projectile")) {
+        auto screenPos = ToScreen(playerCoordinates, playerRotation, actorRelativeVector, playerFov);
+        RECT pos = { screenPos.x - 5, screenPos.y, screenPos.x + 100, screenPos.y + 30 };
+
+        auto text = convertCharArrayToLPCWSTR(convertStringToCharArray(std::format(">{}< Ballz", GetDistance(playerCoordinates, actorRelativeVector))));
+
+        DirectX.Font->DrawTextW(NULL, text, -1, &pos, 0, rainbow);
+    }
     if (strstr(name.c_str(), "CrewService")) {
        
         CrewService(actor, localPlayer);
@@ -152,11 +165,6 @@ void DrawActorOnScreen(const std::string& name, FVector& actorRelativeVector, AP
         auto screenPos = ToScreen(playerCoordinates, playerRotation, actorRelativeVector, playerFov);
         Drawing::Rect(screenPos.x, screenPos.y, 5, 5, D3DCOLOR_ARGB(255, 50, 5, 100));
     }
-
-    /*if (strstr(name.c_str(), "BP_PlayerPirate_C")
-        && (playerCoordinates.x != actorRelativeVector.x
-        || playerCoordinates.y != actorRelativeVector.y
-        || playerCoordinates.z != actorRelativeVector.z)) {*/
 
     if(strstr(name.c_str(), "BP_PlayerPirate_C") && actor != localPlayer->PlayerController->AcknowledgedPawn){
 
@@ -316,7 +324,7 @@ void ProcessLevel(ULevel* level, APlayerState* playerState, ULocalPlayer* localP
     }
 }
 void GetActors() {
-
+    rainbow = rainbowColour();
     if (GetAsyncKeyState(VK_END) & 1) {
         ladderToggle = !ladderToggle;
 
@@ -358,6 +366,7 @@ void GetActors() {
         if (level != nullptr && (uintptr_t)level < 0xF00000000000) {
             __try {
                 ProcessLevel(level, playerState, localPlayer);
+                
             }      
             __except (EXCEPTION_EXECUTE_HANDLER) {
                 continue;

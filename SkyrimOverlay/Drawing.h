@@ -5,6 +5,14 @@
 
 #pragma warning(disable : 4244)
 
+struct vertex
+{
+	FLOAT x, y, z, rhw;
+	DWORD color;
+};
+
+enum circle_type { full, half, quarter };
+
 namespace Drawing
 {
 	void String(int x, int y, char * string, D3DCOLOR color);
@@ -13,6 +21,7 @@ namespace Drawing
 	void Line(int x, int y, int x1, int y2, D3DCOLOR color);
 	void FilledRect(int x, int y, int width, int height, D3DCOLOR color);
 	void Circle(int x, int y, int radius, D3DCOLOR color);
+	void Circle2(float x, float y, float radius, int rotate, int type, bool smoothing, int resolution, DWORD color);
 }
 
 namespace Color

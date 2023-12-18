@@ -93,6 +93,8 @@ long long GetGNameAddress() {
 
 }
 
+
+
 /*
 void GetWindowSize() {
 	RECT rect;
