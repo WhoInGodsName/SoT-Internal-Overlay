@@ -11,6 +11,7 @@
 #include "sdk.h"
 #include "Actors.h"
 #include <thread>
+#include "Menu.h"
 
 directx_t DirectX;
 ID3DXFont* pFont;
@@ -87,7 +88,7 @@ void DirectxFunctions::RenderDirectX()
 		}
 
 		if (bMenuEnabled) {
-			Drawing::FilledRect(20, 20, 200, 500, D3DCOLOR_ARGB(150, 5, 5, 5));
+			Menu();
 		}
 		
 		//crosshair
@@ -142,7 +143,7 @@ DWORD WINAPI ThreadProc(LPVOID lpParam)
 			DispatchMessage(&Overlay.Message);
 			TranslateMessage(&Overlay.Message);
 		}
-		Sleep(1);
+		Sleep(0.2);
 		OverlayFunctions::GetTargetWindow();
 	}
 

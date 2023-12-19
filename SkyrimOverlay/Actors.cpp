@@ -7,6 +7,8 @@
 #include "Functions.h"
 #include "Data.h"
 #include <format>
+#include "Menu.h"
+
 
 UWorld* world = 0;
 uintptr_t aimedAt = 0;
@@ -48,8 +50,10 @@ void CrewService(AActor* actor, ULocalPlayer* player) {
 
     int textYOffset = 0;
 
-    int x = SOT_WINDOW_W - 200;
+    int x = SOT_WINDOW_W - 210;
     int y = SOT_WINDOW_H - 1400;
+
+    Drawing::FilledRect(x, y, 190, 240, D3DCOLOR_ARGB(150, 5, 5, 5));
 
     for (int i = 0; i < crewCount; i++) {
         
@@ -142,6 +146,7 @@ void DrawActorOnScreen(const std::string& name, FVector& actorRelativeVector, AP
     }
     */
     if (strstr(name.c_str(), "BP_Projectile")) {
+        rainbow = rainbowColour();
         auto screenPos = ToScreen(playerCoordinates, playerRotation, actorRelativeVector, playerFov);
         RECT pos = { screenPos.x - 5, screenPos.y, screenPos.x + 100, screenPos.y + 30 };
 
@@ -149,13 +154,13 @@ void DrawActorOnScreen(const std::string& name, FVector& actorRelativeVector, AP
 
         DirectX.Font->DrawTextW(NULL, text, -1, &pos, 0, rainbow);
     }
-    if (strstr(name.c_str(), "CrewService")) {
+    if (strstr(name.c_str(), "CrewService") && Toggles[1] == true) {
        
         CrewService(actor, localPlayer);
     }
     if (strstr(name.c_str(), "Ladder")) {
         
-        if (ladderToggle) {
+        if (Toggles[3] == true) {
             FastLadder(actor, 5000);
         }
         else {
@@ -324,11 +329,11 @@ void ProcessLevel(ULevel* level, APlayerState* playerState, ULocalPlayer* localP
     }
 }
 void GetActors() {
-    rainbow = rainbowColour();
-    if (GetAsyncKeyState(VK_END) & 1) {
+    
+    /*if (GetAsyncKeyState(VK_END) & 1) {
         ladderToggle = !ladderToggle;
 
-    }
+    }*/
     if (GetAsyncKeyState(VK_DELETE) & 1) {
         aimToggle = !aimToggle;
     }
