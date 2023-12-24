@@ -139,14 +139,13 @@ DWORD WINAPI ThreadProc(LPVOID lpParam)
 	{
 		if (PeekMessage(&Overlay.Message, Overlay.Window, 0, 0, PM_REMOVE))
 		{
-			
 			DispatchMessage(&Overlay.Message);
 			TranslateMessage(&Overlay.Message);
 		}
-		Sleep(0.2);
 		OverlayFunctions::GetTargetWindow();
+		Sleep(5);
 	}
-
+	
 	return 0;
 }
 

@@ -25,6 +25,7 @@ struct directx_t
 };
 
 extern directx_t DirectX;
+extern bool bMenuEnabled;
 
 namespace DirectxFunctions
 {

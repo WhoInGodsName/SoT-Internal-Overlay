@@ -9,7 +9,11 @@
 #define SOT_WINDOW_W 2560
 #define SOT_WINDOW_H 1440
 
+class UClass {};
+struct UFunction;
 
+
+/*
 struct FNameEntryHandle {
 	uint32_t Block = 0;
 	uint32_t Offset = 0;
@@ -73,27 +77,112 @@ struct FNamePool {
 	uint32_t AnsiCount;
 	uint32_t WideCount;
 };
+*/
 
-class FName {
-public:
-	int index;
-	int number;
+struct FNameEntry
+{
+	uint32_t Index;
+	uint32_t pad;
+	FNameEntry* HashNext;
+	char AnsiName[1024];
 
-	FName() :
-		index(0),
-		number(0)
-	{ }
-
-	FName(uint32_t i) :
-		index(i),
-		number(0)
-	{ }
-	std::string GetName();
+	const int GetIndex() const { return Index >> 1; }
+	const char* GetAnsiName() const { return AnsiName; }
 };
 
-extern FNamePool* NamePool;
+class TNameEntryArray
+{
+public:
 
-struct UObject {
+	bool IsValidIndex(uint32_t index) const { return index < NumElements; }
+
+	FNameEntry const* GetById(uint32_t index) const { return *GetItemPtr(index); }
+
+	FNameEntry const* const* GetItemPtr(uint32_t Index) const {
+		const auto ChunkIndex = Index / 16384;
+		const auto WithinChunkIndex = Index % 16384;
+		const auto Chunk = Chunks[ChunkIndex];
+		return Chunk + WithinChunkIndex;
+	}
+
+	FNameEntry** Chunks[128];
+	uint32_t NumElements = 0;
+	uint32_t NumChunks = 0;
+};
+
+struct FName
+{
+	int ComparisonIndex = 0;
+	int Number = 0;
+
+	static inline TNameEntryArray* GNames = nullptr;
+
+	static const char* GetNameByIdFast(int Id) {
+		auto NameEntry = GNames->GetById(Id);
+		if (!NameEntry) return nullptr;
+		return NameEntry->GetAnsiName();
+	}
+
+	static std::string GetNameById(int Id) {
+		auto NameEntry = GNames->GetById(Id);
+		if (!NameEntry) return std::string();
+		return NameEntry->GetAnsiName();
+	}
+
+	const char* GetNameFast() const {
+		auto NameEntry = GNames->GetById(ComparisonIndex);
+		if (!NameEntry) return nullptr;
+		return NameEntry->GetAnsiName();
+	}
+
+	const std::string GetName() const {
+		auto NameEntry = GNames->GetById(ComparisonIndex);
+		if (!NameEntry) return std::string();
+		return NameEntry->GetAnsiName();
+	};
+
+	inline bool operator==(const FName& other) const {
+		return ComparisonIndex == other.ComparisonIndex;
+	};
+
+	FName() {}
+
+	FName(const char* find) {
+		for (auto i = 6000u; i < GNames->NumElements; i++)
+		{
+			auto name = GetNameByIdFast(i);
+			if (!name) continue;
+			if (strcmp(name, find) == 0) {
+				ComparisonIndex = i;
+				return;
+			};
+		}
+	}
+};
+
+//extern FNamePool* NamePool;
+
+
+
+struct FUObjectItem
+{
+	class UObject* Object;
+	int Flags;
+	int ClusterIndex;
+	int SerialNumber;
+	int pad;
+};
+
+struct TUObjectArray
+{
+	FUObjectItem* Objects;
+	int MaxElements;
+	int NumElements;
+
+	class UObject* GetByIndex(int index) { return Objects[index].Object; }
+};
+
+/*struct UObject {
 public:
 	void** VFTable;
 	uint32_t ObjectFlags;
@@ -104,6 +193,49 @@ public:
 
 	std::string GetName();
 	std::string GetFullName();
+};*/
+
+// Class CoreUObject.Object
+// Size: 0x28 (Inherited: 0x00)
+struct UObject {
+	UObject(UObject* addr) { *this = addr; }
+	static inline TUObjectArray* GObjects = nullptr;
+	void* Vtable; // 0x0
+	int ObjectFlags; // 0x8
+	int InternalIndex; // 0xC
+	UClass* Class; // 0x10
+	FName Name; // 0x18
+	UObject* Outer; // 0x20
+
+	std::string GetName() const;
+	const char* GetNameFast() const;
+	std::string GetFullName() const;
+	bool IsA(UClass* cmp) const;
+
+	template<typename T>
+	static T* FindObject(const std::string& name)
+	{
+		for (int i = 0; i < GObjects->NumElements; ++i)
+		{
+			auto object = GObjects->GetByIndex(i);
+
+			if (object == nullptr)
+			{
+				continue;
+			}
+
+			if (object->GetFullName() == name)
+			{
+				return reinterpret_cast<T*>(object);
+			}
+		}
+		return nullptr;
+	}
+
+	static UClass* FindClass(const std::string& name)
+	{
+		return FindObject<UClass>(name);
+	}
 };
 
 std::string ReadGname(uintptr_t actor_id);
@@ -120,9 +252,9 @@ public:
 	char pad2[0x68];
 };
 
-class uclass : public ustruct {
+class Uclass : public ustruct {
 public:
-	char pad[0x180];
+	char pad[0x138];
 };
 
 template <class T>
@@ -136,6 +268,11 @@ public:
 class FVector {
 public:
 	float x = 0.0f, y = 0.0f, z = 0.0f;
+};
+
+class FVector2D {
+public:
+	float x = 0.0f, y = 0.0f;
 };
 
 class FRotator {
@@ -188,6 +325,11 @@ struct FGuid
 	int32_t C;
 	int32_t D;
 };
+
+
+
+
+
 Vector2 ToScreen(FVector playerCoords, FRotator player_camera, FVector actorCoords, float playerFOV);
 
 double** MakeVArr(float x, float y, float z);

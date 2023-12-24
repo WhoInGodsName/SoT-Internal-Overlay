@@ -108,6 +108,7 @@ void CrewService(AActor* actor, ULocalPlayer* player) {
     }
 }
 
+
 D3DCOLOR rainbowColour() {
     if (r < 255) {
         r += 1;
@@ -135,17 +136,40 @@ void DrawActorOnScreen(const std::string& name, FVector& actorRelativeVector, AP
     auto playerCoordinates = playerState->RootComponent->ActorCoordinates;
     auto playerRotation = localPlayer->PlayerController->PlayerCameraManager->CameraCache.POV.Rotation;
     auto playerFov = localPlayer->PlayerController->PlayerCameraManager->CameraCache.POV.FOV;
-    /*
-    if (strstr(name.c_str(), "Barrel")) {
+
+    if (strstr(name.c_str(), "BP_SmallMapTable_C") || strstr(name.c_str(), "MapTable_C") || strstr(name.c_str(), "BP_MediumMapTable_C")) {
+        auto mapActor = reinterpret_cast<AMapTable*>(actor);
+        auto mapPins = mapActor->MapPins;
+
+        
+
+        for (int i = 0; i < mapPins.Count; i++) {
+            auto mapPinLocation = mapPins.Objects[i];
+            FVector mapAbs { mapPinLocation.x * 100, mapPinLocation.y * 100};
+
+            auto screenPos = ToScreen(playerCoordinates, playerRotation, mapAbs, playerFov);
+            RECT pos = { screenPos.x - 5, screenPos.y - 50, screenPos.x + 200, screenPos.y + 30 };
+            auto distance = GetDistance(playerCoordinates, mapAbs);
+
+            if (distance < 0) {
+                distance = 0;
+            }
+
+            auto text = convertCharArrayToLPCWSTR(convertStringToCharArray(std::format("Pin #{} >{}m<", i + 1, distance)));
+            DirectX.Font->DrawTextW(NULL, text, -1, &pos, 0, D3DCOLOR_ARGB(255, 237, 133, 47));
+        }
+    }
+    
+    if (strstr(name.c_str(), "Barrel") && ESPToggles[5] == true) {
         auto screenPos = ToScreen(playerCoordinates, playerRotation, actorRelativeVector, playerFov);
         //Drawing::Rect(screenPos.x, screenPos.y, 10, 10, D3DCOLOR_ARGB(255, 255, 5, 5));
         // Add Direct3D Font rendering here if needed
         RECT pos = { screenPos.x - 5, screenPos.y + 15, screenPos.x + 60, screenPos.y + 30 };
-        auto text = convertCharArrayToLPCWSTR(convertStringToCharArray("BARREL"));
+        auto text = convertCharArrayToLPCWSTR(convertStringToCharArray("B"));
         DirectX.Font->DrawTextW(NULL, text, -1, &pos, 0, D3DCOLOR_ARGB(255, 255, 5, 5));
     }
-    */
-    if (strstr(name.c_str(), "BP_Projectile")) {
+
+    if (strstr(name.c_str(), "BP_Projectile") && ESPToggles[4] == true) {
         rainbow = rainbowColour();
         auto screenPos = ToScreen(playerCoordinates, playerRotation, actorRelativeVector, playerFov);
         RECT pos = { screenPos.x - 5, screenPos.y, screenPos.x + 100, screenPos.y + 30 };
@@ -166,12 +190,14 @@ void DrawActorOnScreen(const std::string& name, FVector& actorRelativeVector, AP
         else {
             FastLadder(actor, 1);
         }
-        
-        auto screenPos = ToScreen(playerCoordinates, playerRotation, actorRelativeVector, playerFov);
-        Drawing::Rect(screenPos.x, screenPos.y, 5, 5, D3DCOLOR_ARGB(255, 50, 5, 100));
+        if (ESPToggles[3] == true) {
+            auto screenPos = ToScreen(playerCoordinates, playerRotation, actorRelativeVector, playerFov);
+            Drawing::Rect(screenPos.x, screenPos.y, 5, 5, D3DCOLOR_ARGB(255, 50, 5, 100));
+        }
+       
     }
 
-    if(strstr(name.c_str(), "BP_PlayerPirate_C") && actor != localPlayer->PlayerController->AcknowledgedPawn){
+    if(strstr(name.c_str(), "BP_PlayerPirate_C") && actor != localPlayer->PlayerController->AcknowledgedPawn && ESPToggles[1] == true){
 
         //Aimbot
         actorRelativeVector.z += 20;
@@ -179,7 +205,7 @@ void DrawActorOnScreen(const std::string& name, FVector& actorRelativeVector, AP
         actorRelativeVector.z -= 60;
         auto screenAim = ToScreen(playerCoordinates, playerRotation, actorRelativeVector, playerFov);
 
-        if ((GetAsyncKeyState(VK_RBUTTON) & 0x8000) && GetDistance(playerCoordinates, actorRelativeVector) < 5 && aimToggle) {
+        if ((GetAsyncKeyState(VK_RBUTTON) & 0x8000) && GetDistance(playerCoordinates, actorRelativeVector) < 5 && Toggles[2] == true) {
             if (aimedAt == 0) {
                 aimedAt = reinterpret_cast<uintptr_t>(actor);
             }
@@ -242,12 +268,12 @@ void DrawActorOnScreen(const std::string& name, FVector& actorRelativeVector, AP
 
 
     //typedef bool(__thiscall* AreCharactersInSameCrew_t)(AAthenaCharacter* Player1, AAthenaCharacter* Player2);
-     if (ships.contains(name)) {
+     if (ships.contains(name) && ESPToggles[2] == true) {
         auto screenPos = ToScreen(playerCoordinates, playerRotation, actorRelativeVector, playerFov);
 
         wchar_t* text2 = convertCharArrayToLPCWSTR(convertStringToCharArray(""));
         
-        RECT pos = { screenPos.x - 5, screenPos.y + 10, screenPos.x + 180, screenPos.y + 30 };
+        RECT pos = { screenPos.x - 5, screenPos.y + 10, screenPos.x + 200, screenPos.y + 30 };
         
         if (GetDistance(playerCoordinates, actorRelativeVector) < 995 && strstr(name.c_str(), "ShipTemplate_C")) {
             text2 = convertCharArrayToLPCWSTR(convertStringToCharArray(std::format(" {} - {}m", ships[name], GetDistance(playerCoordinates, actorRelativeVector))));
@@ -329,20 +355,12 @@ void ProcessLevel(ULevel* level, APlayerState* playerState, ULocalPlayer* localP
     }
 }
 void GetActors() {
-    
-    /*if (GetAsyncKeyState(VK_END) & 1) {
-        ladderToggle = !ladderToggle;
-
-    }*/
-    if (GetAsyncKeyState(VK_DELETE) & 1) {
-        aimToggle = !aimToggle;
-    }
 
     if (worldAddress == 0) {
         worldAddress = GetWorldAddress();
     }
     
-    world = *(UWorld**)(worldAddress);
+     world = *(UWorld**)(worldAddress);
 
     //auto actorInfo = ActorInfo();
     if(!world){

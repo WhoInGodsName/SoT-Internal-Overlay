@@ -9,7 +9,31 @@
 
 long long gNameAddress = 0;
 
-std::string FName::GetName() {
+std::string UObject::GetName() const
+{
+
+	auto name = Name.GetName();
+	if (Name.Number > 0)
+	{
+		name += '_' + std::to_string(Name.Number);
+	}
+
+	auto pos = name.rfind('/');
+	if (pos == std::string::npos)
+	{
+		return name;
+	}
+
+	return name.substr(pos + 1);
+}
+
+const char* UObject::GetNameFast() const
+{
+	return Name.GetNameFast();
+}
+
+
+/*std::string FName::GetName() {
 	auto entry = NamePool->Allocator.GetById(index);
 	auto name = entry->String();
 	if (number > 0) {
@@ -43,7 +67,7 @@ std::string UObject::GetFullName() {
 	}
 	name = ClassPrivate->GetName() + " " + name + this->GetName();
 	return name;
-}
+}*/
 
 std::string ReadGname(uintptr_t actor_id) {
 	if (gNameAddress == 0) {
@@ -183,3 +207,11 @@ int GetDistance(FVector playerCoords, FVector actorCoords) {
 	}
 }*/
 
+/*
+void ToggleFog(ALightingController* pLightingController, std::size_t nUExponentialHeightFogComponentOffset, bool bRemove) {
+	uint64_t fog = *reinterpret_cast<uint64_t*>(reinterpret_cast<uint64_t>(pLightingController) + nUExponentialHeightFogComponentOffset);
+	(reinterpret_cast<void(__fastcall*)(uint64_t, bool, bool)>((*reinterpret_cast<uint64_t**>(fog))[132]))(fog, bRemove, true);
+}*/
+
+typedef void(__stdcall* fnProcessEvent)(void* Object, UFunction* Function, void* Params);
+fnProcessEvent process_event;
