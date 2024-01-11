@@ -29,6 +29,10 @@ char* convertStringToCharArray(std::string string) {
 
 }
 
+wchar_t* convertStringToLPCWSTR(std::string string) {
+	return convertCharArrayToLPCWSTR(convertStringToCharArray(string));
+}
+
 MODULEINFO GetModuleInfo(const char* szModule)
 {
 	MODULEINFO modinfo = { 0 };

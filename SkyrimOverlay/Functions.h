@@ -15,6 +15,7 @@ namespace ProcessFunctions
 
 wchar_t* convertCharArrayToLPCWSTR(const char* charArray);
 char* convertStringToCharArray(std::string string);
+wchar_t* convertStringToLPCWSTR(std::string string);
 long long GetWorldAddress();
 long long GetGNameAddress();
 

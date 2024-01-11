@@ -108,6 +108,18 @@ void CrewService(AActor* actor, ULocalPlayer* player) {
     }
 }
 
+float GetWaterPercentage(AActor* actor) {
+    float water = 0;
+    auto shipComponent = reinterpret_cast<AShip*>(actor);
+    if (shipComponent) {
+        auto hullDamageComponent = reinterpret_cast<AHullDamage*>(shipComponent->HullDamage);
+        auto internalWater = hullDamageComponent->InternalWater->WaterAmount;
+        water = (internalWater / 250) * 100;
+    }
+
+    return water;
+}
+
 
 D3DCOLOR rainbowColour() {
     if (r < 255) {
@@ -137,7 +149,7 @@ void DrawActorOnScreen(const std::string& name, FVector& actorRelativeVector, AP
     auto playerRotation = localPlayer->PlayerController->PlayerCameraManager->CameraCache.POV.Rotation;
     auto playerFov = localPlayer->PlayerController->PlayerCameraManager->CameraCache.POV.FOV;
 
-    if (strstr(name.c_str(), "BP_SmallMapTable_C") || strstr(name.c_str(), "MapTable_C") || strstr(name.c_str(), "BP_MediumMapTable_C")) {
+    if (strstr(name.c_str(), "BP_SmallMapTable_C") || strstr(name.c_str(), "MapTable_C") || strstr(name.c_str(), "BP_MediumMapTable_C") && ESPToggles[6] == true) {
         auto mapActor = reinterpret_cast<AMapTable*>(actor);
         auto mapPins = mapActor->MapPins;
 
@@ -271,22 +283,27 @@ void DrawActorOnScreen(const std::string& name, FVector& actorRelativeVector, AP
      if (ships.contains(name) && ESPToggles[2] == true) {
         auto screenPos = ToScreen(playerCoordinates, playerRotation, actorRelativeVector, playerFov);
 
-        wchar_t* text2 = convertCharArrayToLPCWSTR(convertStringToCharArray(""));
+        wchar_t* text2 = convertStringToLPCWSTR("");
+        wchar_t* waterPercentageText = convertStringToLPCWSTR("");
         
         RECT pos = { screenPos.x - 5, screenPos.y + 10, screenPos.x + 200, screenPos.y + 30 };
+        RECT pos2 = { screenPos.x, screenPos.y + 25, screenPos.x + 110, screenPos.y + 50 };
         
         if (GetDistance(playerCoordinates, actorRelativeVector) < 995 && strstr(name.c_str(), "ShipTemplate_C")) {
-            text2 = convertCharArrayToLPCWSTR(convertStringToCharArray(std::format(" {} - {}m", ships[name], GetDistance(playerCoordinates, actorRelativeVector))));
+            text2 = convertStringToLPCWSTR(std::format(" {} - {}m", ships[name], GetDistance(playerCoordinates, actorRelativeVector)));
+            waterPercentageText = convertStringToLPCWSTR(std::format("Water: {}%", (int)GetWaterPercentage(actor)));
             Drawing::Rect(screenPos.x, screenPos.y, 10, 10, D3DCOLOR_ARGB(255, 5, 5, 255));
         }
         else if(!strstr(name.c_str(), "ShipTemplate_C")) {
-            text2 = convertCharArrayToLPCWSTR(convertStringToCharArray(std::format(" {} - {}m", ships[name], GetDistance(playerCoordinates, actorRelativeVector))));
+            text2 = convertStringToLPCWSTR(std::format(" {} - {}m", ships[name], GetDistance(playerCoordinates, actorRelativeVector)));
             Drawing::Rect(screenPos.x, screenPos.y, 10, 10, D3DCOLOR_ARGB(255, 5, 5, 255));
         }
-        //std::cout << &nameAddress << "\n";
 
         DirectX.Font->DrawTextW(NULL, text2, -1, &pos, 0, D3DCOLOR_ARGB(255, 5, 5, 255));
-    }   
+        DirectX.Font->DrawTextW(NULL, waterPercentageText, -1, &pos2, 0, D3DCOLOR_ARGB(255, 5, 5, 255));
+
+
+     }   
 }
 
 void ProcessActor(AActor* actor, APlayerState* playerState, ULocalPlayer* localPlayer) {
