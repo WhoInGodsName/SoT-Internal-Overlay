@@ -89,7 +89,7 @@ long long GetWorldAddress() {
 
 long long GetGNameAddress() {
 	uintptr_t moduleBase = (uintptr_t)GetModuleHandle(L"SoTGame.exe");
-	uintptr_t gNameBase = FindPattern("SoTGame.exe", "\x48\x8B\x1D\x00\x00\x00\x00\x48\x85\xDB\x75\x00\xB9\x08\x04\x00\x00", "xxx????xxxx?xxxxx");
+	uintptr_t gNameBase = FindPattern("SoTGame.exe", "\x48\x89\x3D\x00\x00\x00\x00\x41\x8B\x75\x00", "xxx????xxxx");
 	uintptr_t gNameOffset = *(UINT*)(gNameBase + 3);
 	uintptr_t uGName = gNameBase + gNameOffset + 7;
 
